@@ -1,0 +1,23 @@
+Loading embedding model: BAAI/bge-large-en-v1.5 (downloads on first use)...
+`torch_dtype` is deprecated! Use `dtype` instead!
+Embedding model ready in 0.2s
+hybrid_rerank / R01: What is the submission deadline for Bid1 after all addendums?
+hybrid_rerank / R02: What changed in Addendum 2 compared to the original RFP?
+hybrid_rerank / R04: How long is the Bid1 contract, including renewal options?
+hybrid_rerank / R05: When and how is the Bid1 pre-proposal meeting held, and is attendance required?
+hybrid_rerank / R06: Can Bid1 proposals be sent by email, or must they use a portal or sealed paper submission?
+hybrid_rerank / R07: Which installation and deployment services are required for Bid1 devices?
+hybrid_rerank / R08: What minimum warranties does Bid1 require for Chromebooks and Windows laptops?
+hybrid_rerank / R10: When must Form 1295 be submitted for Bid1 according to Addendum 1?
+hybrid_rerank / R11: What RAM and storage are specified for the Tier 2 staff laptop in Bid1?
+hybrid_rerank / R13: Which affidavit requirements does Bid2 explicitly state, and which supplied or referenced affidavit forms must be distinguished?
+hybrid_rerank / R15: What is the Bid2 closing date and time shown on its bid portal?
+hybrid_rerank / R16: How must Bid2 proposals be submitted and which submission methods are prohibited?
+hybrid_rerank / R18: How soon must Bid2 equipment be delivered, and what dates appear in its product table?
+hybrid_rerank / R19: What extended warranty does Bid2 require and when does it start?
+hybrid_rerank / R20: Which laptop and dock models and quantities are requested in Bid2?
+hybrid_rerank / R21: What processor and processor SKU are listed for Bid2 laptops?
+hybrid_rerank / R22: What memory and SSD capacity are specified for Bid2 laptops?
+hybrid_rerank / R25: Compare the warranty requirements of both bids.
+hybrid_rerank / R26: Which manufacturer is named for Bid2, and what reseller authorization may be requested?
+Saved evaluation/retrieval/experiments/grouped-60.json and evaluation/retrieval/experiments/grouped-60.md

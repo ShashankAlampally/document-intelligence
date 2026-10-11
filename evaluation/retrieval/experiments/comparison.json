@@ -1,0 +1,117 @@
+{
+  "status": "completed",
+  "dataset_sha256": "d3f2636a8a455c3d482bd7af08329cb524759d2688b2d9c589531fecb992c55f",
+  "k": 5,
+  "comparisons": [
+    {
+      "profile": "existing",
+      "candidates": 20,
+      "median_seconds": 0.493,
+      "output": "evaluation/retrieval/experiments/existing-20.json",
+      "configuration": "vector",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.8947368421052632,
+      "mrr": 0.6885964912280702
+    },
+    {
+      "profile": "existing",
+      "candidates": 20,
+      "median_seconds": 0.432,
+      "output": "evaluation/retrieval/experiments/existing-20.json",
+      "configuration": "hybrid",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.8026315789473685,
+      "mrr": 0.7543859649122807
+    },
+    {
+      "profile": "existing",
+      "candidates": 20,
+      "median_seconds": 3.683,
+      "output": "evaluation/retrieval/experiments/existing-20.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.8421052631578947,
+      "mrr": 0.706140350877193
+    },
+    {
+      "profile": "existing",
+      "candidates": 40,
+      "median_seconds": 5.476,
+      "output": "evaluation/retrieval/experiments/existing-40.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.8421052631578947,
+      "mrr": 0.706140350877193
+    },
+    {
+      "profile": "existing",
+      "candidates": 60,
+      "median_seconds": 5.563,
+      "output": "evaluation/retrieval/experiments/existing-60.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.8421052631578947,
+      "mrr": 0.706140350877193
+    },
+    {
+      "profile": "grouped",
+      "candidates": 20,
+      "median_seconds": 0.165,
+      "output": "evaluation/retrieval/experiments/grouped-20.json",
+      "configuration": "vector",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.75,
+      "mrr": 0.6070175438596491
+    },
+    {
+      "profile": "grouped",
+      "candidates": 20,
+      "median_seconds": 0.208,
+      "output": "evaluation/retrieval/experiments/grouped-20.json",
+      "configuration": "hybrid",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.7763157894736842,
+      "mrr": 0.6421052631578947
+    },
+    {
+      "profile": "grouped",
+      "candidates": 20,
+      "median_seconds": 0.835,
+      "output": "evaluation/retrieval/experiments/grouped-20.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.7894736842105263,
+      "mrr": 0.6535087719298245
+    },
+    {
+      "profile": "grouped",
+      "candidates": 40,
+      "median_seconds": 3.217,
+      "output": "evaluation/retrieval/experiments/grouped-40.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.7894736842105263,
+      "mrr": 0.6491228070175439
+    },
+    {
+      "profile": "grouped",
+      "candidates": 60,
+      "median_seconds": 5.684,
+      "output": "evaluation/retrieval/experiments/grouped-60.json",
+      "configuration": "hybrid_rerank",
+      "evaluated_questions": 19,
+      "errors": 0,
+      "recall": 0.7894736842105263,
+      "mrr": 0.6491228070175439
+    }
+  ]
+}

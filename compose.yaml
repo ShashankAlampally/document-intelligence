@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        EMBEDDING_MODEL: ${RFP_EMBEDDING_MODEL:-BAAI/bge-large-en-v1.5}
+        EMBEDDING_REVISION: ${RFP_EMBEDDING_REVISION:-d4aa6901d3a41ba39fb536a557fa166f842b0e09}
+        RERANKER_MODEL: ${RFP_RERANKER_MODEL:-cross-encoder/ms-marco-MiniLM-L6-v2}
+        RERANKER_REVISION: ${RFP_RERANKER_REVISION:-233902d25c440f23af6f7d6e94d2946bac0bee0a}
+    ports:
+      - "127.0.0.1:${RFP_WEB_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      RFP_HOST: 0.0.0.0
+      RFP_PORT: "8000"
+      RFP_DATA_DIR: /app/Assignment-Data-Statements (AI Engineer-Emplay Inc)
+      RFP_STORAGE_DIR: /app/storage
+      RFP_VECTOR_DB_DIR: /app/storage/chroma
+      RFP_OUTPUT_DIR: /app/outputs
+      RFP_LOG_DIR: /app/logs
+      RFP_EMBEDDING_CACHE_DIR: /opt/embedding-models
+      RFP_EMBEDDING_DEVICE: cpu
+      RFP_RERANKER_CACHE_DIR: /opt/embedding-models
+      RFP_RERANKER_DEVICE: cpu
+      RFP_FRONTEND_DIST_DIR: /app/frontend/dist
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    init: true
+    stop_grace_period: 30s
+    volumes:
+      - rfp-storage:/app/storage
+      - rfp-outputs:/app/outputs
+      - rfp-logs:/app/logs
+
+volumes:
+  rfp-storage:
+  rfp-outputs:
+  rfp-logs:
