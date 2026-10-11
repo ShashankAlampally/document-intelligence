@@ -23,6 +23,9 @@ class ConnectedWorkspaceService(WorkspaceService):
         self.jobs = JobRecords(settings.storage_dir)
         self.tasks: dict[UUID, asyncio.Task] = {}
         self.worker = asyncio.Lock()
+        from app.api.workspace.extraction_jobs import ExtractionJobs
+
+        self.extractions = ExtractionJobs(self)
 
     async def start_folder(self, files: list[UploadFile]) -> ProcessingJob:
         job = ProcessingJob(id=uuid4(), status="processing")
@@ -107,5 +110,7 @@ class ConnectedWorkspaceService(WorkspaceService):
         return await self.execute_query(query, search_reply)
 
     async def close(self) -> None:
+        if self.extractions.tasks:
+            await asyncio.gather(*list(self.extractions.tasks.values()))
         if self.tasks:
             await asyncio.gather(*list(self.tasks.values()))

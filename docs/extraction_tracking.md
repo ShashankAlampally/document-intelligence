@@ -64,3 +64,35 @@ python -m pytest -q
 ```
 
 Regression tests cover topic filtering, heading continuity, text/table duplicates, different numeric values, field balancing, budgets, graphs, citation contracts and tracking error reports. No Groq calls are made by these tests.
+
+## Website extraction recovery
+
+The Extract button now uses POST `/api/sessions/extractions`, polls GET
+`/api/sessions/extractions/{job_id}`, and resumes with POST
+`/api/sessions/extractions/{job_id}/resume`. Ordinary Ask stays synchronous.
+The dedicated action extracts directly, without a planner call.
+
+Each job is stored under `storage/extraction-jobs/{job_id}` with an atomic progress
+record, successful model/search operation files, validation trace and final result.
+Draft groups are visible before validation and explicitly labelled unvalidated.
+Provider wait events update the displayed status. Existing shared retry and pacing
+limits still apply. An exhausted retry/wait budget pauses the job for explicit
+resume; this does not guarantee quota will be available on the next attempt.
+
+Resume reconstructs the existing graph from saved searches and successful JSON
+responses. Completed provider calls are replayed locally; failed calls are retried.
+This is job-scoped recovery, not cross-user semantic caching. A call interrupted
+before its response is saved can run again. Replay traces contain original response
+usage and therefore must not be counted as new provider usage on each resume.
+Model/output-limit/collection changes block resume to avoid mixing configurations.
+
+Browser localStorage retains job IDs per discovery ID. After refresh, attach the
+same folder ID and click Resume extraction. A server restart marks an orphaned job
+paused. Docker's storage volume must be retained. The old synchronous extraction
+API and typing an extraction request into Ask do not use this job recovery flow;
+use the Extract button. The website does not automatically recover failed runs
+created before this feature.
+
+Offline tests simulate failure mid-extraction and prove that the initial successful
+calls are not repeated, partial fields persist, and resumed validation completes.
+No live Groq calls were used to verify this feature.

@@ -199,3 +199,53 @@ def test_open_existing_id_rejects_unknown_or_invalid_id(connected):
     client, _ = connected
     assert client.get(f"/api/sessions/{uuid4()}").status_code == 404
     assert client.get("/api/sessions/not-a-uuid").status_code == 422
+
+
+def test_background_extraction_pause_resume_without_repeating_model_calls(connected):
+    import time
+
+    client, service = connected
+    upload = upload_ready(client)
+    model = service.runtime._model
+    original = model.complete
+    count = 0
+
+    def interrupted(messages, **kwargs):
+        nonlocal count
+        count += 1
+        if count == 3:
+            raise RuntimeError("Simulated exhausted provider quota")
+        return original(messages, **kwargs)
+
+    model.complete = interrupted
+    response = client.post(
+        "/api/sessions/extractions",
+        json={
+            "question": "Extract all fields",
+            "discovery_ids": [upload["discovery_id"]],
+        },
+    )
+    assert response.status_code == 200
+    job_id = response.json()["id"]
+
+    def wait():
+        for _ in range(300):
+            job = client.get(f"/api/sessions/extractions/{job_id}").json()
+            if job["status"] in {"paused", "completed"}:
+                return job
+            time.sleep(0.01)
+        raise AssertionError("Extraction did not finish")
+
+    paused = wait()
+    assert paused["status"] == "paused"
+    assert 0 < paused["completed_fields"] < 20
+    partial = dict(paused["fields"])
+    assert client.post(f"/api/sessions/extractions/{job_id}/resume").status_code == 200
+    completed = wait()
+    assert completed["status"] == "completed", completed
+    assert completed["completed_fields"] == 20
+    assert set(partial).issubset(completed["fields"])
+    assert len(model.calls) == 8  # Seven extraction groups + one validator; no planner.
+    assert count == 9  # One failed attempt, successful completed calls never repeated.
+    assert completed["reply"]["sources"]
+    assert service.extractions.path(job_id).is_file()

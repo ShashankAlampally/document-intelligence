@@ -1,3 +1,7 @@
+import { runExtraction } from './features/extraction/run-extraction';
+import { UsageGuide } from './components/UsageGuide';
+import { HelpIcon } from './components/icons';
+import { readSavedBids, rememberBid, savedBidsKey, type SavedBid } from './lib/saved-bids';
 import { useEffect, useRef, useState } from 'react';
 import { NewWorkspaceIcon as Plus, WorkspaceIcon, AskIcon as MessageSquare, SearchIcon as Search, ExtractIcon as FileText, PanelLeftClose, PanelLeftOpen, FolderIcon as FolderOpen, DocumentsIcon, DiscoveryIcon as Fingerprint, WarningIcon as TriangleAlert, ReadyIcon as CheckCircle2, LoadingIcon as LoaderCircle, EmptyIcon } from './components/icons';
 import { DisclosureLabel } from './components/DisclosureLabel';
@@ -14,7 +18,7 @@ import { DocumentList } from './components/DocumentList';
 import { EvidencePanel } from './components/EvidencePanel';
 import { getProcessingJob, queryDocuments, uploadFolder, type Citation, type Reply, type IndexedFolder } from './lib/api';
 
-type Message = { id: string; question: string; mode: 'ask' | 'search' | 'extract'; folders: string[]; reply?: Reply; error?: string };
+type Message = { id: string; question: string; mode: 'ask' | 'search' | 'extract'; folders: string[]; reply?: Reply; error?: string; progress?: string; draft?: string };
 export type Chat = { id: string; name: string; folders: ChatFolder[]; status: 'empty' | 'selected' | 'processing' | 'ready'; error?: string; notice?: string; messages: Message[] };
 const newChat = (): Chat => ({ id: crypto.randomUUID(), name: 'New bid chat', folders: [], status: 'empty', messages: [] });
 
@@ -25,6 +29,15 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
   const [question, setQuestion] = useState('');
   const [source, setSource] = useState<{ sources: Citation[]; index: number } | null>(null);
   const [sidebar, setSidebar] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
+  const [savedBids, setSavedBids] = useState<SavedBid[]>(() => {
+    try { return readSavedBids(window.localStorage); } catch { return []; }
+  });
+  const [storageNotice, setStorageNotice] = useState('');
+  useEffect(() => {
+    try { window.localStorage.setItem(savedBidsKey, JSON.stringify(savedBids)); setStorageNotice(''); }
+    catch { setStorageNotice('Browser storage is unavailable. Bid IDs will only be remembered until you refresh.'); }
+  }, [savedBids]);
   const [documentsVisible, setDocumentsVisible] = useState(false);
   const [pending, setPending] = useState<string[]>([]);
   const mounted = useRef(true);
@@ -63,6 +76,7 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
       notice: skipped ? `${skipped} unsupported files skipped.` : undefined });
   }
   function attachFolder(saved: IndexedFolder) {
+    setSavedBids(current => rememberBid(current, { discoveryId: saved.discovery_id, name: saved.folder_name }));
     const target = chat.id;
     setChats(current => current.map(item => {
       if (item.id !== target || item.folders.some(folder => folder.discoveryId === saved.discovery_id)) return item;
@@ -98,6 +112,7 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
         if (job.status === 'failed') setChats(current => current.map(item => item.id === id ? { ...item, folders: item.folders.map(value => value.id === folder.id ? { ...value, jobId: undefined } : value) } : item));
         if (job.status !== 'ready' || !job.discovery_id) throw new Error(job.detail || 'Processing did not return a discovery ID. Please retry.');
         const processingDetail = job.detail;
+        setSavedBids(current => rememberBid(current, { discoveryId: job.discovery_id!, name: folder.name }));
         setChats(current => current.map(item => item.id === id ? { ...item, folders: item.folders.map(value => value.id === folder.id ? { ...value, processingDetail } : value) } : item));
         return job.discovery_id;
       }, (folderId, progress) => {
@@ -120,7 +135,14 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
     setPending(current => [...current, id]);
     setChats(current => current.map(item => item.id === id ? { ...item, messages: [...item.messages, message] } : item));
     try {
-      const reply = await queryDocuments(discoveryIds, message.question, messageMode === 'extract' ? 'ask' : messageMode);
+      const reply = messageMode === 'extract'
+        ? await runExtraction(discoveryIds[0], job => {
+          setChats(current => current.map(item => item.id === id ? { ...item, messages: item.messages.map(entry => entry.id === message.id ? {
+            ...entry, progress: job.detail,
+            draft: Object.entries(job.fields).map(([name, field]) => `${name}: ${field.value || field.notes || 'Not found in documents'}`).join('\n'),
+          } : entry) } : item));
+        })
+        : await queryDocuments(discoveryIds, message.question, messageMode);
       setChats(current => current.map(item => item.id === id ? { ...item, messages: item.messages.map(entry => entry.id === message.id ? { ...entry, reply } : entry) } : item));
     } catch (error) {
       setChats(current => current.map(item => item.id === id ? { ...item, messages: item.messages.map(entry => entry.id === message.id ? { ...entry, error: error instanceof Error ? error.message : 'Unable to get a response.' } : entry) } : item));
@@ -156,6 +178,7 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
       <header className="topbar">
         <div className="breadcrumb"><button className="icon-button" aria-label={sidebar ? 'Hide sidebar' : 'Show sidebar'} onClick={() => setSidebar(value => !value)}>{sidebar ? <PanelLeftClose size={19}/> : <PanelLeftOpen size={19}/>}</button><WorkspaceIcon size={20} className="app-title-icon" aria-hidden="true"/><strong>RFP Intelligence</strong></div>
         <div className="topbar-actions">
+          <button type="button" className="guide-toggle" aria-haspopup="dialog" onClick={() => setGuideOpen(true)}><HelpIcon size={18} aria-hidden="true"/>How to use</button>
           {chat.status === 'ready' && <button className="documents-toggle" aria-label="Toggle chat folders" aria-pressed={documentsVisible && !source} onClick={() => { setSource(null); setDocumentsVisible(value => !value); }}><DocumentsIcon size={18} aria-hidden="true"/><span>Documents ({fileCount})</span></button>}
           <span className={`status-pill ${chat.status === 'ready' ? 'ready' : ''}`}>{chat.status === 'ready' ? <CheckCircle2 size={15} aria-hidden="true"/> : chat.status === 'processing' ? <LoaderCircle size={15} className="loading-icon" aria-hidden="true"/> : <EmptyIcon size={16} aria-hidden="true"/>}{chat.status === 'ready' ? `${selectedIds.length} bids ready` : chat.status === 'processing' ? 'Processing' : 'No bids ready'}</span>
         </div>
@@ -171,7 +194,8 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
             </section>
             {hasNotices && <details className="processing-summary" open><summary><DisclosureLabel icon={TriangleAlert}>Processing warnings</DisclosureLabel></summary>{chat.folders.filter(folder => hasParsingNotices(folder.processingDetail)).map(folder => <p key={folder.id} className="notice-banner" role="status"><strong>{folder.name}:</strong> {folder.processingDetail}</p>)}</details>}
           </>}
-          <ExistingFolder key={chat.id} busy={chat.status === 'processing' || pending.includes(chat.id)} discoveryIds={selectedIds} onAttach={attachFolder}/>
+          <ExistingFolder key={chat.id} busy={chat.status === 'processing' || pending.includes(chat.id)} discoveryIds={selectedIds} savedBids={savedBids} onForget={id => setSavedBids(current => current.filter(bid => bid.discoveryId !== id))} onAttach={attachFolder}/>
+          {storageNotice && <p className="notice-banner" role="status">{storageNotice}</p>}
           {chat.notice && <p className="notice-banner" role="status">{chat.notice}</p>}{chat.error && <p className="error-banner" role="alert">{chat.error}</p>}
           {chat.status === 'ready' && <div className="message-list">{chat.messages.map(message => <article key={message.id} className="message">
             <div className="request-heading"><strong>{message.mode === 'extract' ? 'Extraction' : message.mode === 'search' ? 'Search' : 'Question'}</strong><span>{message.question}</span></div>
@@ -180,7 +204,8 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
             {message.reply ? <>
               {message.mode === 'extract' ? <ExtractionContent text={message.reply.answer}/> : <AnswerContent text={message.reply.answer}/>}
               <SourceCards sources={message.reply.sources} search={message.mode === 'search'} onOpen={index => setSource({ sources: message.reply!.sources, index })}/>
-            </> : message.error ? <p className="error-banner" role="alert">{message.error}</p> : <p className="muted" role="status">{message.mode === 'extract' ? 'Extracting 20 fields. This may take several minutes.' : message.mode === 'search' ? 'Searching documents…' : 'Preparing an answer…'}</p>}
+            </> : message.error ? <p className="error-banner" role="alert">{message.error}</p> : <p className="muted" role="status">{message.mode === 'extract' ? message.progress || 'Extracting 20 fields. This may take several minutes.' : message.mode === 'search' ? 'Searching documents…' : 'Preparing an answer…'}</p>}
+            {!message.reply && message.draft && <details><summary>Saved partial draft — not final validation</summary><ExtractionContent text={message.draft}/></details>}
           </article>)}<div ref={conversationEnd}/></div>}
         </div>
         {(source || (chat.status === 'ready' && documentsVisible)) && <button className="panel-backdrop" aria-label="Close document panel" onClick={() => { setSource(null); setDocumentsVisible(false); }}/>} 
@@ -206,5 +231,6 @@ export default function App({ initialChats }: { initialChats?: Chat[] } = {}) {
         </div>
       </footer>}
     </main>
+    <UsageGuide open={guideOpen} onClose={() => setGuideOpen(false)}/>
   </div>;
 }

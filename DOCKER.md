@@ -6,9 +6,10 @@ Docker packaging builds the React frontend and serves it with FastAPI at one URL
 The folder/query HTTP routes now connect to the ingestion, Chroma and agent
 pipeline. Search is key-free; Ask needs RFP_GROQ_API_KEY.
 
-The Docker executable is unavailable in the development environment where this
-setup was written. Python static-serving tests and the frontend build were run;
-an actual Docker image build/start still needs verification on Docker Desktop.
+The project owner built and started the Docker image and verified Bid2 indexing
+and basic cited Q&A. Automated tests also cover Python static serving and the
+frontend build. A fresh reviewer installation and restart/persistence demo have
+not been independently verified.
 
 ## Reviewer setup
 
@@ -24,7 +25,7 @@ an actual Docker image build/start still needs verification on Docker Desktop.
    On Windows PowerShell use `Copy-Item .env.example .env`.
 4. Edit `.env` and set `RFP_GROQ_API_KEY` to your own key. Never include your real
    `.env` in the repository or submission. Search/indexing use a local embedding
-   model; real LLM Q&A/extraction require Groq access once integrated.
+   model; real LLM Q&A/extraction require Groq access.
 5. Run:
 
    ```bash

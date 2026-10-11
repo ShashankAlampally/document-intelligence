@@ -30,4 +30,5 @@ export {
   ChevronRight,
   ArrowRight,
   X as CloseIcon,
+  CircleHelp as HelpIcon,
 } from 'lucide-react';
