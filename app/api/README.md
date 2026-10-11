@@ -10,6 +10,9 @@ in `workspace_service.py` remains replaceable for tests or another deployment.
 | `GET /api/jobs/{job_id}` | UUID job ID | 200 processing job |
 | `POST /api/sessions/ask` | SelectedDocumentQuery JSON | 200 DocumentReply |
 | `POST /api/sessions/search` | SelectedDocumentQuery JSON | 200 DocumentReply |
+| `POST /api/sessions/extractions` | SelectedDocumentQuery for one bid | Saved extraction job |
+| `GET /api/sessions/extractions/{job_id}` | UUID job ID | Status and saved draft fields |
+| `POST /api/sessions/extractions/{job_id}/resume` | UUID job ID | Resumed extraction job |
 | `POST /api/sessions/{session_id}/ask` | DocumentQuery JSON | 200 DocumentReply |
 | `POST /api/sessions/{session_id}/search` | DocumentQuery JSON | 200 DocumentReply |
 
@@ -51,12 +54,15 @@ Index reports: `vector_db_dir/../manifests/DISCOVERY_ID.json` (shared with CLI).
 Agent traces: `logs/api-RUN_ID.json`.
 Successful extraction: `outputs/fields-DISCOVERY_ID.json`.
 All generated folders remain ignored by Git. Extraction requested through Ask
-returns readable field lines and citations; a dedicated field editor/download UI
-is still deferred. Multi-folder extraction asks for a single-folder selection.
+returns readable field lines and citations. The dedicated Extract action uses
+saved background jobs with polling and explicit resume; see
+[extraction tracking](../../docs/extraction_tracking.md). Multi-folder extraction
+asks for a single-folder selection.
 
 Existing CLI-indexed uploads can be queried if their manifest and Chroma records
-are present. Ready jobs persist across restarts. An unfinished job discovered
-after restart becomes failed and requires a fresh upload. Failed processing keeps
+are present. Ready jobs persist across restarts. An unfinished indexing job discovered
+after restart becomes failed and requires a fresh upload. Saved extraction jobs
+are separate: interrupted runs can be resumed explicitly. Failed processing keeps
 saved originals for inspection; failed size-limit uploads are removed.
 
 ## Errors and operating limits

@@ -1,4 +1,4 @@
-"""Connect the Q&A steps; usable from either a terminal or future API."""
+"""Connect the Q&A steps used by the CLI and workspace API."""
 
 from app.agents.qa.graph.state import WorkflowState
 from app.agents.qa.models.answers import QuestionAnswer
