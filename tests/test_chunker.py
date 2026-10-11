@@ -128,27 +128,3 @@ def test_structure_aware_tables_retain_headers_cells_and_row_provenance():
     assert table.table_rows == doc.tables[0].rows
     assert table.table_headers == doc.tables[0].headers
     assert table.table_row_start == table.table_row_end == 1
-
-
-def test_snapshot_regroup_preserves_content_and_isolates_discovery():
-    from scripts.index_retrieval_variant import regroup
-
-    doc = make_document()
-    doc.source.doc_type = "addendum"
-    doc.text_blocks = [
-        TextBlock(
-            page_number=1,
-            text="1. Need etching?\nAnswer: Laptops only.\n2. Need tags?\nAnswer: Yes.",
-        )
-    ]
-    original = chunk_document(doc, ChunkSettings(max_chars=50, overlap_chars=10)).chunks
-    before = [c.model_dump_json() for c in original]
-    new_id = uuid4()
-    changed = regroup(original, new_id)
-    assert [c.model_dump_json() for c in original] == before
-    assert all(c.source.discovery_id == new_id for c in changed)
-    assert any("1. Need etching?\nAnswer: Laptops only." == c.text for c in changed)
-    assert any("2. Need tags?\nAnswer: Yes." == c.text for c in changed)
-    table = next(c for c in changed if c.content_type == "table")
-    assert table.table_rows == doc.tables[0].rows
-    assert "Unique table value" in table.text

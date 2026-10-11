@@ -105,15 +105,6 @@ def test_topic_anchor_can_use_an_explicit_continuation_heading():
     assert matching_terms([hit], ["monitor"], context) == []
 
 
-def test_tracking_report_records_failed_retrieval_without_crashing():
-    from scripts.pipeline_report import render_report
-
-    record = dict(
-        discovery_id="id",
-        status="error",
-        trace=[dict(step="retrieve_evidence", field_group="products", error="TimeoutError")],
-    )
-    assert "retrieval failed" in render_report(record)
 
 
 def test_repeated_results_preserve_the_first_ranked_occurrence():

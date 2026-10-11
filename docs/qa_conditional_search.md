@@ -50,23 +50,3 @@ the upload and document and describes the start of the passage, not every bullet
 No follow-up conversation memory is introduced.
 
 The extraction workflow is unchanged. No database migration or reindexing is required.
-## Evaluation JSON tracking
-
-`scripts/evaluate_qa.py` runs document questions through this graph. The independent
-`scripts/qa_behavior.py` wrapper counts actual model invocations, including failed calls.
-Every result includes a `behavior` object with the decision, missing information,
-planned queries, search rounds, candidate/selected chunk IDs, selection/omission reasons,
-model responses, token usage, timings and errors. Full prompts and passages remain
-in the workflow trace. `run_summary` totals one-call/two-call questions and token usage.
-
-Counts exclude the website planner and internal Groq HTTP retries. An additional search
-can use only one model call if it returns no usable evidence and final generation is
-skipped; `additional_search_used` makes that distinction visible. Model-call durations
-include budget waits, so they are not pure inference time. Raw per-call responses allow
-investigating invalid JSON or citation errors even when answer validation fails.
-
-Tracking includes coverage, the original model decision, whether gaps forced search,
-and supporting passage IDs. Resume accepts only runs marked `coverage_qa_v2`; the old
-accuracy baseline is kept
-separate. No reference answers are provided to QA or used as grading prompts.
-Offline tests exercise real graph branches with fake models and tools, including the API.

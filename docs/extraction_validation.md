@@ -84,7 +84,7 @@ script. Drafts saved before validation should not be treated as verified results
 From the project root:
 
 ```sh
-.venv/bin/python -m pytest -q tests/test_combined_extraction_validation.py tests/test_validation_batches.py tests/test_extraction_validator.py tests/test_tracking_script.py
+.venv/bin/python -m pytest -q tests/test_combined_extraction_validation.py tests/test_validation_batches.py tests/test_extraction_validator.py
 .venv/bin/python -m ruff check app tests scripts
 ```
 
@@ -95,58 +95,3 @@ limits, null outcomes, provider/contract errors, budget bounds, tracking and API
 For a live website test, restart the backend, use an existing discovery ID and ask
 for all fields. Inspect the saved fields JSON and API trace. Reindexing is unnecessary.
 No live test was run for this implementation.
-
-## Failure-tracking updates
-
-The tracking script now saves timestamped `events.jsonl` entries before searches
-and model calls. Search exceptions include their request and detailed message.
-Model events include a call ID, schema name, response format, inputs, raw outputs,
-status codes and detailed exceptions. API keys and authorization headers are not
-recorded by these tracking hooks.
-
-During a tracked call, an optional observer on the existing Groq limiter records
-HTTP attempt start/end, provider errors, scheduled retries, wait start/end, actual
-observed wait duration, and retry/wait-limit termination. It does not change pacing
-or retry settings, and the observer is restored after success, error or Ctrl-C.
-`groq_diagnostics` and `report.md` summarize current-run HTTP attempts, retries,
-waits and provider error statuses. Resumed historical trace entries are separate
-from the new directory's event totals.
-
-Completed validation batches and correction groups are saved into `trace.json`
-as they finish, before the next call. Ctrl-C preserves these completed steps and
-marks the run interrupted. Raw events retain the input for the interrupted call.
-An abrupt process kill can leave an unfinished last event/wait; exact elapsed time
-cannot be recovered for a process that never recorded its end event.
-
-Offline tracking checks:
-
-```sh
-.venv/bin/python -m pytest -q tests/test_pipeline_tracking_events.py tests/test_groq_rate_limit.py tests/test_tracking_script.py
-```
-
-## Validate saved drafts after a failed run
-
-Run the new command against a tracking output directory containing `trace.json`:
-
-```sh
-.venv/bin/python -m scripts.validate_saved_extraction \
-  outputs/pipeline-e6830bc5-4866-4caa-a2d7-b95f8c9e5b39-20261011T054528616150Z \
-  --prepare-only
-```
-
-This preflight is offline: it verifies all 20 saved fields, their exact cited
-passages, upload identity, and the batch budgets. It creates no model or database.
-The failed run above now fits four initial validation batches; its Bid Summary
-has room for the field overhead without raising the evidence limit.
-
-Remove `--prepare-only` to run live validation. That run uses the same validation
-and correction graph as the website. It does not repeat initial extraction.
-Rejected fields can still cause targeted searches and re-extraction, followed by
-one more validation round. Groq pacing remains active.
-
-Results, events and progress are written into a new `outputs/validation-...`
-directory. Original saved files remain unchanged. The original trace and elapsed
-time are retained as history, while `groq_diagnostics` counts only new-run events.
-Missing fields, missing cited passages or inconsistent sources fail before any
-model calls. This command requires the indexed upload for possible corrections.
-An interruption saves completed validation/correction steps with interrupted status.

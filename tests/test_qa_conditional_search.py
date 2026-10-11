@@ -5,8 +5,6 @@ import json
 import pytest
 
 from app.agents.qa.graph.workflow import answer_question
-from scripts.evaluate_qa import run_questions
-from scripts.qa_behavior import TrackedQAModel, summarize_behavior
 
 
 def answer(ids, text="Deadline July 9; warranty three years."):
@@ -77,14 +75,11 @@ def test_sufficient_evidence_returns_after_one_call():
         "missing_information": [],
     }
     raw, search = SequenceModel([draft]), Search()
-    model = TrackedQAModel(raw)
-    result = answer_question("Deadline?", model, {"search_documents": search})
+    result = answer_question("Deadline?", raw, {"search_documents": search})
     assert result.status == "found"
     assert len(raw.calls) == len(search.calls) == 1
-    behavior = summarize_behavior(result.trace, model.calls)
-    assert behavior["decision"] == "answer"
-    assert behavior["model_call_count"] == 1
-    assert not behavior["additional_search_used"]
+    assert result.trace[1]["output"]["action"] == "answer"
+    assert not any(step.get("round") == "additional" for step in result.trace)
     schema = raw.calls[0][1]["response_format"]["json_schema"]["schema"]
     assert schema["properties"]["source_chunk_ids"]["items"]["enum"] == ["deadline"]
     assert "similarity" not in raw.calls[0][0][-1]["content"]
@@ -93,29 +88,24 @@ def test_sufficient_evidence_returns_after_one_call():
 
 def test_missing_information_runs_one_additional_round_and_retains_initial_evidence():
     raw, search = SequenceModel([decision(), answer(["deadline", "warranty"])]), Search()
-    model = TrackedQAModel(raw)
-    result = answer_question("Deadline and warranty?", model, {"search_documents": search})
+    result = answer_question("Deadline and warranty?", raw, {"search_documents": search})
     assert result.status == "found"
     assert len(raw.calls) == len(search.calls) == 2
     assert {source["chunk_id"] for source in result.sources} == {"deadline", "warranty"}
-    behavior = summarize_behavior(result.trace, model.calls)
-    assert behavior["model_call_count"] == 2
-    assert behavior["additional_search_used"]
-    assert behavior["planned_queries"] == ["Staff laptop warranty"]
-    assert behavior["total_tokens"] == 24
-    assert [item["round"] for item in behavior["search_rounds"]] == ["initial", "additional"]
+    assert result.trace[1]["output"]["search_queries"] == ["Staff laptop warranty"]
+    searches = [step for step in result.trace if step["step"] == "retrieve_evidence"]
+    assert [step.get("round", "initial") for step in searches] == ["initial", "additional"]
 
 
 def test_search_failure_stops_before_second_model_call():
-    model = TrackedQAModel(SequenceModel([decision()]))
+    model = SequenceModel([decision()])
     result = answer_question(
         "Deadline and warranty?", model, {"search_documents": Search(fail_additional=True)}
     )
     assert result.status == "error"
     assert len(model.calls) == 1
-    behavior = summarize_behavior(result.trace, model.calls)
-    assert behavior["additional_search_used"]
-    assert behavior["search_rounds"][-1]["error"]
+    assert result.trace[-1]["round"] == "additional"
+    assert result.trace[-1]["error"]
 
 
 def test_empty_initial_evidence_can_trigger_search_instead_of_immediate_abstention():
@@ -151,30 +141,6 @@ def test_invalid_search_plan_does_not_execute_more_tools(response):
     assert len(search.calls) == 1
 
 
-def test_evaluation_json_records_two_calls_and_provider_error(tmp_path):
-    record = dict(
-        status="prepared",
-        pairs=[
-            dict(
-                id=1,
-                question="Deadline and warranty?",
-                reference_answer="Do not send this",
-                reference_evidence="Hidden",
-            )
-        ],
-        results=[],
-    )
-    model = SequenceModel([decision(), TimeoutError("Provider timed out")])
-    run_questions(record, tmp_path, model, Search())
-    saved = json.loads((tmp_path / "results.json").read_text())
-    behavior = saved["results"][0]["behavior"]
-    assert saved["status"] == "error"
-    assert behavior["model_call_count"] == 2
-    assert behavior["successful_model_calls"] == 1
-    assert behavior["model_calls"][1]["error_detail"] == "Provider timed out"
-    assert saved["run_summary"]["two_call_questions"] == 1
-    assert saved["run_summary"]["error_questions"] == 1
-    assert all("Do not send this" not in json.dumps(messages) for messages, _ in model.calls)
 
 
 def test_reported_gap_overrides_immediate_answer_without_an_extra_planning_call():
@@ -185,15 +151,13 @@ def test_reported_gap_overrides_immediate_answer_without_an_extra_planning_call(
         "missing_information": ["Staff laptop warranty"],
     }
     raw, search = SequenceModel([partial, answer(["deadline", "warranty"])]), Search()
-    tracked = TrackedQAModel(raw)
-    result = answer_question("Deadline and warranty?", tracked, {"search_documents": search})
+    result = answer_question("Deadline and warranty?", raw, {"search_documents": search})
     assert result.status == "found"
     assert len(raw.calls) == len(search.calls) == 2
     assert "Focus: Staff laptop warranty" in search.calls[1]["query"]
-    behavior = summarize_behavior(result.trace, tracked.calls)
-    assert behavior["model_decision"] == "answer"
-    assert behavior["decision"] == "search_more"
-    assert behavior["search_forced_by_gaps"]
+    assert result.trace[1]["model_decision"]["action"] == "answer"
+    assert result.trace[1]["output"]["action"] == "search_more"
+    assert result.trace[1]["search_forced_by_gaps"]
 
 
 def test_coverage_gap_triggers_search_even_if_missing_information_is_empty():

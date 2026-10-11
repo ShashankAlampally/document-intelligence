@@ -116,6 +116,6 @@ python -m ruff check app scripts tests
 node --test frontend/tests/*.test.mjs
 ```
 
-The final offline audit passed 428 Python tests, 16 frontend tests, Ruff and the
+The final offline audit passed 407 Python tests, 16 frontend tests, Ruff and the
 TypeScript/production frontend build. Dependencies are defined in
 [pyproject.toml](pyproject.toml) and [frontend/package.json](frontend/package.json).
